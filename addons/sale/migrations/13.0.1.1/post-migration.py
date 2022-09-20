@@ -44,6 +44,22 @@ def update_sale_order_line_invoice_rel(cr):
             JOIN {} rel ON rel.invoice_line_id = ail.id"""
         ).format(sql.Identifier("ou_sale_order_line_invoice_rel"))
     )
+    # Update refund invoices
+    openupgrade.logged_query(
+        cr, sql.SQL(
+            """
+                INSERT INTO sale_order_line_invoice_rel (invoice_line_id, order_line_id)
+                SELECT raml.id, sol.id
+                FROM sale_order_line_invoice_rel AS rel
+                LEFT JOIN sale_order_line AS sol on rel.order_line_id = sol.id
+                LEFT JOIN account_move_line AS aml ON rel.invoice_line_id = aml.id
+                LEFT JOIN account_move AS am ON aml.move_id = am.id
+                LEFT JOIN account_move AS ram ON ram.invoice_origin = am.name
+                LEFT JOIN account_move_line AS raml ON raml.move_id = ram.id
+                WHERE ram.type = 'out_refund' AND sol.product_id = raml.product_id
+            """
+        )
+    )
 
 
 def update_product_attribute_custom_value(cr):
